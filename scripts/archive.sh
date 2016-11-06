@@ -80,6 +80,7 @@ buildNumber=`git log -1 --pretty=format:%h`_`git log -a |wc -l | sed 's/^[ \t]*/
 
 echo "version: ${version}"
 echo "info.plist: ${infoPath}"
+echo "tembundleDisplayName: ${tembundleDisplayName}"
 
 serverEnvironment=DDXQ_BUILD_FOR_TEST
 
@@ -94,7 +95,11 @@ if [[ ${channel} == "enterprise" ]]; then
 	echo '企业证书 打包，重命名'
     developmentTeam="NM9VP4YSNU"
 	productBundleIdentifier="com.mmbang.neighborhoodenterprise"
-	bundleDisplayName="${tembundleDisplayName}-e"
+	if [[ ${tembundleDisplayName} != *-e ]]; then
+		bundleDisplayName="${tembundleDisplayName}-e"
+	else
+		bundleDisplayName="${tembundleDisplayName}"
+	fi
 	profileName=mmbang_wildcard_can_push
 	#profileID=aa64f6e9-4156-45b3-ae33-718ca2b24593
 	signKey=${KEY_enterprise}
@@ -112,7 +117,7 @@ profileID=`/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/sec
 echo "profileUUID: ${profileID}"
 
 if [ ${environment} == "test" ]; then
-    serverEnvironment=DDXQ_BUILD_FOR_TEST 
+    serverEnvironment=DDXQ_BUILD_FOR_TEST
 elif [[ ${environment} == "prerelease" ]]; then
 	#statements
 	serverEnvironment=DDXQ_BUILD_FOR_PRERELEASE 
@@ -150,8 +155,10 @@ echo "branchName: ${branchName} buildNumber：${buildNumber} profileName：${pro
 echo "configInfo: ${configInfo}"
 echo "out_path : ${out_path}"
 echo "ipaName : ${ddxq_ipaName}"
+echo "bundleDisplayName : ${bundleDisplayName}"
 
-#rm -fr "build/*"
+rm -fr build/*.ipa
+rm -fr buld/*.dSYM
 rm -fr ${upload_path}/*
 
 # 安装 profile
@@ -165,6 +172,11 @@ fi
 /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName ${bundleDisplayName}" "${infoPath}"
 
 echo "执行 build"
+GCC_PREPROCESSOR_DEFINITIONS_Adhoc=(${serverEnvironmentDefine},${configInfo},"\$(inherited)")
+echo "GCC_PREPROCESSOR_DEFINITIONS_Adhoc"
+echo ${GCC_PREPROCESSOR_DEFINITIONS_Adhoc}
+
+echo "执行 build"
 # clean 
 xcodebuild -workspace neighborhood.xcworkspace -scheme neighborhood -configuration ${configWay} clean
 # build pods
@@ -173,7 +185,7 @@ xcodebuild -workspace neighborhood.xcworkspace -scheme Pods-neighborhood -derive
 #xcodebuild -workspace neighborhood.xcworkspace -scheme neighborhood -configuration ${configWay} -derivedDataPath build/DerivedData OBJROOT=${PWD}/build SYMROOT=${PWD}/build DEVELOPMENT_TEAM="${developmentTeam}" PRODUCT_BUNDLE_IDENTIFIER="${productBundleIdentifier}" CODE_SIGN_IDENTITY="${signKey}" PROVISIONING_PROFILE="${profileName}" PROVISIONING_PROFILE_SPECIFIER="mmbang_wildcard_can_push" IPHONEOS_DEPLOYMENT_TARGET="7.0" build GCC_PREPROCESSOR_DEFINITIONS='${GCC_PREPROCESSOR_DEFINITIONS} ${serverEnvironment} ${configInfo}'
 
 # change to use archive
-xcodebuild -workspace neighborhood.xcworkspace -scheme neighborhood -configuration ${configWay} -derivedDataPath build/DerivedData -archivePath "${archivePath}" DEVELOPMENT_TEAM="${developmentTeam}" PRODUCT_BUNDLE_IDENTIFIER="${productBundleIdentifier}" CODE_SIGN_IDENTITY="${signKey}" PROVISIONING_PROFILE="${profileID}" PROVISIONING_PROFILE_SPECIFIER="${profileName}" IPHONEOS_DEPLOYMENT_TARGET="7.0" archive GCC_PREPROCESSOR_DEFINITIONS='${GCC_PREPROCESSOR_DEFINITIONS} ${serverEnvironment} ${configInfo}'
+xcodebuild -workspace neighborhood.xcworkspace -scheme neighborhood -configuration ${configWay} -derivedDataPath build/DerivedData -archivePath "${archivePath}" DEVELOPMENT_TEAM="${developmentTeam}" PRODUCT_BUNDLE_IDENTIFIER="${productBundleIdentifier}" CODE_SIGN_IDENTITY="${signKey}" PROVISIONING_PROFILE="${profileID}" PROVISIONING_PROFILE_SPECIFIER="${profileName}" IPHONEOS_DEPLOYMENT_TARGET="7.0" archive GCC_PREPROCESSOR_DEFINITIONS=${GCC_PREPROCESSOR_DEFINITIONS_Adhoc}
 
 # PackageApplication is deprecated, use `xcodebuild -exportArchive` instead.
 #xcrun -sdk iphoneos PackageApplication build/${configWay}-iphoneos/neighborhood.app -o ${out_path}/${ddxq_ipaName} --sign "${signKey}" --embed ProvisionProfile/mmbang_wildcard_can_push.mobileprovision
