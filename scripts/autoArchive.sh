@@ -74,7 +74,7 @@ if [ x${channel} == x ]; then
     channel=appstore
 fi
 
-#1、clone 代码
+#1、clone 代码,default branch: master
 git_file_path=~/DDXQAutoArchive/ddxq/ios
 if [ -d $git_file_path ]; then
 	#statements
