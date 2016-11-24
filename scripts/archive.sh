@@ -46,6 +46,24 @@ if [ x${channel} == x ]; then
     channel=appstore
 fi
 
+# 环境
+if [ ${environment} == "test" ]; then
+    serverEnvironment=DDXQ_BUILD_FOR_TEST
+elif [[ ${environment} == "prerelease" ]]; then
+	#statements
+	serverEnvironment=DDXQ_BUILD_FOR_PRERELEASE 
+elif [[ ${environment} == "release" ]]; then
+	#statements
+	serverEnvironment=DDXQ_BUILD_FOR_RELEASE  
+elif [[ ${environment} == "develop" ]]; then
+	#statements
+	serverEnvironment=DDXQ_BUILD_FOR_DEVELOP
+else
+	echo "未知 环境，退出"
+	help_info
+	exit;
+fi
+
 # 切换目录,如果在 scrips 目录下执行，则 cd 到上一级目录
 echo "当前目录："
 pwd
@@ -64,6 +82,7 @@ fi
 branchNameOri=`git symbolic-ref --short -q HEAD`
 branchName="${branchNameOri//\//_}"
 
+# 证书
 KEY_release="iPhone Distribution: Shanghai 100 meters  Network Technology Co., Ltd. (4PE8GWH9XQ)"
 KEY_enterprise="iPhone Distribution: Shanghai Yaya information technology co., LTD"
 infoPath="./neighborhood/Support Files/neighborhood-Info.plist"
@@ -72,6 +91,7 @@ infoPath="./neighborhood/Support Files/neighborhood-Info.plist"
 # 转义 infoPath 中的空格
 #infoPathFormat="${infoPath// /\\ }"
 
+# 版本号
 version=`/usr/libexec/PlistBuddy -c "print :CFBundleShortVersionString" "${infoPath}"`
 tembundleDisplayName=`/usr/libexec/PlistBuddy -c "print :CFBundleDisplayName" "${infoPath}"`
 
@@ -82,13 +102,17 @@ echo "version: ${version}"
 echo "info.plist: ${infoPath}"
 echo "tembundleDisplayName: ${tembundleDisplayName}"
 
-serverEnvironment=DDXQ_BUILD_FOR_TEST
-
 # archive path
 archivePath=build/DerivedData/neighborhood.xcarchive
 
+#build_type=adhoc
 configWay=Adhoc
 configInfo=ADHOC=1
+serverEnvironmentDefine=${serverEnvironment}=1
+GCC_PREPROCESSOR_DEFINITIONS_Adhoc=(${serverEnvironmentDefine},${configInfo},"\$(inherited)")
+echo "GCC_PREPROCESSOR_DEFINITIONS_Adhoc"
+echo ${GCC_PREPROCESSOR_DEFINITIONS_Adhoc}
+
 
 if [[ ${channel} == "enterprise" ]]; then
 	#statements
@@ -116,25 +140,6 @@ fi
 profileID=`/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i "ProvisionProfile/${profileName}.mobileprovision")`
 echo "profileUUID: ${profileID}"
 
-if [ ${environment} == "test" ]; then
-    serverEnvironment=DDXQ_BUILD_FOR_TEST
-elif [[ ${environment} == "prerelease" ]]; then
-	#statements
-	serverEnvironment=DDXQ_BUILD_FOR_PRERELEASE 
-elif [[ ${environment} == "release" ]]; then
-	#statements
-	serverEnvironment=DDXQ_BUILD_FOR_RELEASE  
-elif [[ ${environment} == "develop" ]]; then
-	#statements
-	serverEnvironment=DDXQ_BUILD_FOR_DEVELOP
-else
-	echo "未知 环境，退出"
-	help_info
-	exit;
-fi
-
-build_type=adhoc
-
 dateStr=`date "+%Y%m%d_%H%M"`
 out_path=${PWD}/build
 # ddxq_ipaName=neighborhood_${branchName}_${version}_${buildNumber}_${build_type}_${dateStr}.ipa
@@ -150,6 +155,13 @@ make_dir() {
 }
 
 make_dir
+
+# 写入 log
+if [ ! -f build/log.txt ]; then
+	echo "API环境:${environment};\n分支:${branchName};\ntag:${tag};\n" > build/log.txt
+	echo "最近10条日志"
+	git log --pretty=format:"%h - %an, %aD : %s" -n 10 >> build/log.txt
+fi
 
 echo "branchName: ${branchName} buildNumber：${buildNumber} profileName：${profileName} configWay：${configWay}"
 echo "configInfo: ${configInfo}"
@@ -170,11 +182,6 @@ fi
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${buildNumberInfo}" "${infoPath}"
 /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName ${bundleDisplayName}" "${infoPath}"
-
-echo "执行 build"
-GCC_PREPROCESSOR_DEFINITIONS_Adhoc=(${serverEnvironmentDefine},${configInfo},"\$(inherited)")
-echo "GCC_PREPROCESSOR_DEFINITIONS_Adhoc"
-echo ${GCC_PREPROCESSOR_DEFINITIONS_Adhoc}
 
 echo "执行 build"
 # clean 

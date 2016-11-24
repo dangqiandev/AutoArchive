@@ -74,7 +74,7 @@ if [ x${channel} == x ]; then
     channel=appstore
 fi
 
-#1、clone 代码,default branch: master
+#1、clone 代码，default master 分支
 git_file_path=~/DDXQAutoArchive/ddxq/ios
 if [ -d $git_file_path ]; then
 	#statements
@@ -107,7 +107,8 @@ currentBranch=`git symbolic-ref --short -q HEAD`
 
 echo "当前分支：${currentBranch}"
 if [[ x${branch} != x${currentBranch} ]]; then
-	echo "切换分支"
+	echo "切换分支,fetch origin"
+	git fetch origin
 	if [ x${tag} != x ]; then
 	    # tag 不为空，从 tag 开一个分支出来
 	    branch=tag/${tag}
@@ -115,9 +116,11 @@ if [[ x${branch} != x${currentBranch} ]]; then
 	else
 		git checkout -b ${branch} origin/${branch}
 	fi
+else
+	git pull
 fi
 
-git pull
+echo "currentBranch == " + `git symbolic-ref --short -q HEAD`
 
 # 最新的 commit hash
 afterCommitHash=`git log --pretty=format:"%h" -1`
@@ -131,17 +134,17 @@ fi
 echo "----- afterCommitHash: ${afterCommitHash}"
 
 #5 写入 log
-echo "environment:${environment};\nbranch:${branch};\ntag:${tag};\n" > neighborhood/build/log.txt
+echo "API环境:${environment};\n分支:${branch};\ntag:${tag};\n" > neighborhood/build/log.txt
 if [ x != x${afterCommitHash} ]; then
 	echo "最近10条日志"
-	git log --pretty=format:"%h - %an, %ar : %s" -n 10 >> neighborhood/build/log.txt
+	git log --pretty=format:"%h - %an, %aD : %s" -n 10 >> neighborhood/build/log.txt
 else
 	#git log ${afterCommitHash}..${beforeCimmitHash} --pretty=format:"%h - %an, %ar : %s" > neighborhood/build/log.txt
 	"${git_file_path}:没有读取到日志，^_^" > neighborhood/build/log.txt
 fi
 
 echo "current hash log:"
-git log --pretty=format:"%h - %an, %ar : %s" -n 1
+git log --pretty=format:"%h - %an, %aD : %s" -n 1
 echo "\n\n"
 
 #6. Makefile 里面有用到相对目录，所以要切换到 Makefile 目录里面
@@ -169,7 +172,7 @@ fi
 git reset --hard
 git clean -fd
 #7 删除 本地分支
-if [ ${branch} != "master" ]; then
+if [ ${branch} != "master" -o ${branch} != "develop" ]; then
 	#删除 本地分支
 	git checkout master
 	git branch -D ${branch}
