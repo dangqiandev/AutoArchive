@@ -7,6 +7,7 @@ help_info(){
 	description="\n	sh archive.sh [-e][-c][-h]
 \n	-e [environment][test|prerelease|release]
 \n	-c [channel][enterprise|appstore]
+\n 	-s [is use short name]
 \n	-h [help]
 
 \n	example:
@@ -15,7 +16,7 @@ help_info(){
     echo ${description} 
 }
 
-while getopts "e:c:h" arg #选项后面的冒号表示该选项需要参数
+while getopts "e:c:hs" arg #选项后面的冒号表示该选项需要参数
 do
     case $arg in
         e)
@@ -25,6 +26,10 @@ do
         c)
 			echo "c's arg:$OPTARG"
 			channel=$OPTARG
+			;;
+		s)
+			echo "s's arg:$OPTARG"
+			isUseShortName=1
 			;;
 		h)
 			echo "h's arg:$OPTARG"
@@ -43,7 +48,12 @@ if [ x${environment} == x ]; then
 fi
 
 if [ x${channel} == x ]; then
-    channel=appstore
+    channel=enterprise
+fi
+
+if [[ x${isUseShortName} == x ]]; then
+	#statements
+	isUseShortName=0
 fi
 
 # 环境
@@ -78,9 +88,9 @@ if [[ -f ./archive.sh ]]; then
 fi
 
 
-# 分支
+# 分支,需要把 “/” 去掉，否则造成命令错乱
 branchNameOri=`git symbolic-ref --short -q HEAD`
-branchName="${branchNameOri//\//_}"
+branchName="${branchNameOri//\//}"
 
 # 证书
 KEY_release="iPhone Distribution: Shanghai 100 meters  Network Technology Co., Ltd. (4PE8GWH9XQ)"
@@ -110,8 +120,7 @@ configWay=Adhoc
 configInfo=ADHOC=1
 serverEnvironmentDefine=${serverEnvironment}=1
 GCC_PREPROCESSOR_DEFINITIONS_Adhoc=(${serverEnvironmentDefine},${configInfo},"\$(inherited)")
-echo "GCC_PREPROCESSOR_DEFINITIONS_Adhoc"
-echo ${GCC_PREPROCESSOR_DEFINITIONS_Adhoc}
+echo "GCC_PREPROCESSOR_DEFINITIONS_Adhoc: ${GCC_PREPROCESSOR_DEFINITIONS_Adhoc}"
 
 
 if [[ ${channel} == "enterprise" ]]; then
@@ -140,10 +149,20 @@ fi
 profileID=`/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i "ProvisionProfile/${profileName}.mobileprovision")`
 echo "profileUUID: ${profileID}"
 
-dateStr=`date "+%Y%m%d_%H%M"`
-out_path=${PWD}/build
+# dateStr=`date "+%Y%m%d_%H%M"`
 # ddxq_ipaName=neighborhood_${branchName}_${version}_${buildNumber}_${build_type}_${dateStr}.ipa
-ddxq_ipaName="neighborhood_${branchName}_${version}_${buildNumber}_${serverEnvironment}_${configInfo}_${profileName}.ipa"
+
+echo "isUseShortName: " ${isUseShortName}
+if [[ ${isUseShortName} == 1 ]]; then
+	#statements
+	# 缩短名称，名称规则：neighborhood_release6.0.0_6.0.0_test_adhoc_appstore，
+	ddxq_ipaName="neighborhood_${branchName}_${version}_${environment}_${configWay}_${channel}.ipa"
+else {
+	ddxq_ipaName="neighborhood_${branchName}_${version}_${buildNumber}_${serverEnvironment}_${configInfo}_${profileName}.ipa"	
+}
+fi;
+
+out_path=${PWD}/build
 save_path=~/DDXQAutoArchive/ddxq/save/ios
 upload_path=~/DDXQAutoArchive/ddxq/upload
 
@@ -172,6 +191,11 @@ echo "bundleDisplayName : ${bundleDisplayName}"
 rm -fr build/*.ipa
 rm -fr buld/*.dSYM
 rm -fr ${upload_path}/*
+if [[ -f ${save_path}/${ddxq_ipaName} ]]; then
+	#statements
+	rm -fr ${save_path}/${ddxq_ipaName}
+	rm -fr ${save_path}/${ddxq_ipaName}.dSYM
+fi
 
 # 安装 profile
 if [[ ! -f "~/Library/MobileDevice/Provisioning\ Profiles/${profileID}.mobileprovision" ]]; then

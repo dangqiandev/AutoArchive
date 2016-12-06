@@ -71,7 +71,7 @@ if [ x${environment} == x ]; then
 fi
 
 if [ x${channel} == x ]; then
-    channel=appstore
+    channel=enterprise
 fi
 
 #1、clone 代码，default master 分支
@@ -122,40 +122,32 @@ fi
 
 echo "currentBranch == " + `git symbolic-ref --short -q HEAD`
 
-# 最新的 commit hash
-afterCommitHash=`git log --pretty=format:"%h" -1`
-
 if [[ ! -d neighborhood/build ]]; then
 	#statements
 	echo "创建 build 目录"
 	mkdir neighborhood/build
 fi
 
-echo "----- afterCommitHash: ${afterCommitHash}"
+# # 最新的 commit hash
+# afterCommitHash=`git log --pretty=format:"%h" -1`
+# echo "----- afterCommitHash: ${afterCommitHash}"
 
-#5 写入 log
-echo "API环境:${environment};\n分支:${branch};\ntag:${tag};\n" > neighborhood/build/log.txt
-if [ x != x${afterCommitHash} ]; then
-	echo "最近10条日志"
-	git log --pretty=format:"%h - %an, %aD : %s" -n 10 >> neighborhood/build/log.txt
-else
-	#git log ${afterCommitHash}..${beforeCimmitHash} --pretty=format:"%h - %an, %ar : %s" > neighborhood/build/log.txt
-	"${git_file_path}:没有读取到日志，^_^" > neighborhood/build/log.txt
-fi
+# #5 写入 log
+# echo "API环境:${environment};\n分支:${branch};\ntag:${tag};\n" > neighborhood/build/log.txt
+# if [ x != x${afterCommitHash} ]; then
+# 	echo "最近10条日志"
+# 	git log --pretty=format:"%h - %an, %aD : %s" -n 10 >> neighborhood/build/log.txt
+# else
+# 	#git log ${afterCommitHash}..${beforeCimmitHash} --pretty=format:"%h - %an, %ar : %s" > neighborhood/build/log.txt
+# 	"${git_file_path}:没有读取到日志，^_^" > neighborhood/build/log.txt
+# fi
 
-echo "current hash log:"
-git log --pretty=format:"%h - %an, %aD : %s" -n 1
-echo "\n\n"
+# echo "current hash log:"
+# git log --pretty=format:"%h - %an, %aD : %s" -n 1
+# echo "\n\n"
 
 #6. Makefile 里面有用到相对目录，所以要切换到 Makefile 目录里面
 cd ./neighborhood
-
-# if [[ ${channel} == "enterprise" ]]; then
-# 	#statements
-# 	`sh ./scripts/archive.sh -e ${environment} -c ${channel}`
-# else
-# 	`sh ./scripts/archive.sh -e ${environment} -c ${channel}`
-# fi
 
 sh ./scripts/archive.sh -e ${environment} -c ${channel}
 
